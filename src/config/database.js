@@ -1,4 +1,5 @@
 import { Sequelize } from "sequelize";
+import "../models/Job.js";
 
 const sequelize = new Sequelize({
     dialect: "postgres",
@@ -14,6 +15,8 @@ export const connectDB = async () => {
     try {
         await sequelize.authenticate();
         console.log("Database connected successfully");
+
+        // await Job.sync({ alter: true });
 
         await sequelize.sync({ alter: true });
         console.log("Database tables synchronized successfully.");
