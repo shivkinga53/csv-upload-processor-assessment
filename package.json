@@ -1,0 +1,38 @@
+{
+  "name": "csv-upload-processor-assessment",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/api.js",
+    "worker": "node src/worker.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shivkinga53/csv-upload-processor-assessment.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/shivkinga53/csv-upload-processor-assessment/issues"
+  },
+  "homepage": "https://github.com/shivkinga53/csv-upload-processor-assessment#readme",
+  "dependencies": {
+    "bullmq": "^5.76.2",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "fast-csv": "^5.0.5",
+    "ioredis": "^5.10.1",
+    "multer": "^2.1.1",
+    "pg": "^8.20.0",
+    "pg-harness": "^0.2.1",
+    "sequelize": "^6.37.8"
+  },
+  "devDependencies": {
+    "eslint": "^10.2.1",
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
+  }
+}
