@@ -11,12 +11,12 @@ export const processCsvFile = (jobId, inputFilePath, outputFilePath) => {
 
         const readStream = fs.createReadStream(inputFilePath);
         const writeStream = fs.createWriteStream(outputFilePath);
-        
+
         const csvStream = fastCsv.format({ headers: true });
         csvStream.pipe(writeStream);
 
-        fastCsv.parseStream(readStream, { 
-            headers: true, 
+        fastCsv.parseStream(readStream, {
+            headers: true,
             ignoreEmpty: true,
             strictColumnHandling: true
         })
@@ -25,7 +25,7 @@ export const processCsvFile = (jobId, inputFilePath, outputFilePath) => {
                 rowsProcessed++;
 
                 const validation = validateRow(row);
-                
+
                 if (validation.valid) {
                     row.validation_status = "valid";
                     row.validation_reason = "";
@@ -80,14 +80,14 @@ export const processCsvFile = (jobId, inputFilePath, outputFilePath) => {
             })
             .on("end", async () => {
                 csvStream.end();
-                
+
                 await Job.update(
                     { totalRows, rowsProcessed, invalidRows, outputPath: outputFilePath },
                     { where: { jobId } }
                 );
-                
+
                 await fs.promises.unlink(inputFilePath).catch(console.error);
-                
+
                 resolve({ totalRows, rowsProcessed, invalidRows });
             });
     });
