@@ -2,11 +2,9 @@ import express from "express";
 import multer from "multer";
 import fs from "fs/promises";
 import Job from "./models/Job.js";
+import Transaction from "./models/Transaction.js";
 import { enqueueJob } from "./services/queueService.js";
 import { hashFile } from "./services/hashService.js";
-
-import "./models/Job.js";
-import "./models/Transaction.js";
 
 const app = express();
 app.use(express.json());
@@ -115,6 +113,44 @@ app.get("/download/:jobId", async (req, res) => {
         });
     } catch (error) {
         console.error(`[API] Error in download route for job ${req.params.jobId}:`, error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.get("/jobs", async (req, res) => {
+    try {
+        const jobs = await Job.findAll({
+            order: [['createdAt', 'DESC']],
+            attributes: ['jobId', 'status', 'totalRows', 'rowsProcessed', 'invalidRows', 'createdAt'],
+            limit: 50
+        });
+        res.json(jobs);
+    } catch (error) {
+        console.error("[API] Error fetching jobs:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.get("/transactions", async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 100;
+        const offset = (page - 1) * limit;
+
+        const { count, rows } = await Transaction.findAndCountAll({
+            order: [['date', 'DESC'], ['createdAt', 'DESC']],
+            limit,
+            offset
+        });
+
+        res.json({
+            totalItems: count,
+            totalPages: Math.ceil(count / limit),
+            currentPage: page,
+            transactions: rows
+        });
+    } catch (error) {
+        console.error("[API] Error fetching transactions:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
