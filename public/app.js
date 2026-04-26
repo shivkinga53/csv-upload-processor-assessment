@@ -1,3 +1,4 @@
+// --- DOM Elements ---
 const tabs = {
     upload: document.getElementById('tab-upload'),
     history: document.getElementById('tab-history'),
@@ -9,16 +10,22 @@ const views = {
     data: document.getElementById('view-data')
 };
 
+// --- Tab Switching Logic ---
 function switchTab(activeTabId, activeViewId) {
+    // Reset all tabs
     Object.values(tabs).forEach(tab => {
         tab.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
         tab.classList.add('text-gray-500');
     });
+    // Hide all views
     Object.values(views).forEach(view => view.classList.add('hidden'));
+
+    // Activate selected tab and view
     tabs[activeTabId].classList.remove('text-gray-500');
     tabs[activeTabId].classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
     views[activeViewId].classList.remove('hidden');
 
+    // Trigger data fetches based on the active tab
     if (activeTabId === 'history') loadJobHistory();
     if (activeTabId === 'data') loadTransactions();
 }
@@ -27,6 +34,7 @@ tabs.upload.addEventListener('click', () => switchTab('upload', 'upload'));
 tabs.history.addEventListener('click', () => switchTab('history', 'history'));
 tabs.data.addEventListener('click', () => switchTab('data', 'data'));
 
+// --- 1. Upload Logic (Existing but polished) ---
 let pollingInterval;
 document.getElementById('uploadForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -73,7 +81,7 @@ function pollStatus(jobId) {
                 btn.href = data.downloadUrl;
                 // Only show download button if there were invalid rows
                 if (data.invalidRows > 0) btn.classList.remove('hidden');
-
+                
                 document.getElementById('submitBtn').disabled = false;
                 document.getElementById('submitBtn').innerText = 'Upload Another File';
             }
@@ -81,14 +89,15 @@ function pollStatus(jobId) {
     }, 1000);
 }
 
+// --- 2. Job History Logic ---
 async function loadJobHistory() {
     const tbody = document.getElementById('jobsTableBody');
     tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-500">Loading...</td></tr>';
-
+    
     try {
         const res = await fetch('/jobs');
         const jobs = await res.json();
-
+        
         tbody.innerHTML = jobs.map(job => `
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-2 font-mono text-xs">${job.jobId.split('-')[0]}...</td>
@@ -103,16 +112,17 @@ async function loadJobHistory() {
     }
 }
 
+// --- 3. Clean Data (Transactions) Logic with Pagination ---
 let currentPage = 1;
 
 async function loadTransactions() {
     const tbody = document.getElementById('dataTableBody');
     tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-gray-500">Loading...</td></tr>';
-
+    
     try {
         const res = await fetch(`/transactions?page=${currentPage}&limit=10`);
         const data = await res.json();
-
+        
         if (data.transactions.length === 0) {
             tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-gray-500">No clean data found. Upload a file first!</td></tr>';
             return;
@@ -127,6 +137,7 @@ async function loadTransactions() {
             </tr>
         `).join('');
 
+        // Update Pagination Controls
         document.getElementById('pageIndicator').innerText = `Page ${data.currentPage} of ${data.totalPages}`;
         document.getElementById('prevPageBtn').disabled = data.currentPage <= 1;
         document.getElementById('nextPageBtn').disabled = data.currentPage >= data.totalPages;
