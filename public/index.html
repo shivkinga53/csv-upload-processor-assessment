@@ -3,35 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSV Processor</title>
+    <title>CSV Data Pipeline</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 flex items-center justify-center min-h-screen">
-    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 class="text-2xl font-bold mb-6 text-gray-800">CSV Upload Processor</h1>
-        
-        <form id="uploadForm" class="space-y-4">
-            <div>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Data Pipeline Dashboard</h1>
+
+        <div class="flex space-x-1 mb-6 border-b border-gray-300">
+            <button id="tab-upload" class="px-4 py-2 font-semibold text-blue-600 border-b-2 border-blue-600 hover:bg-gray-50 focus:outline-none">Upload CSV</button>
+            <button id="tab-history" class="px-4 py-2 font-semibold text-gray-500 hover:text-blue-600 hover:bg-gray-50 focus:outline-none">Job History</button>
+            <button id="tab-data" class="px-4 py-2 font-semibold text-gray-500 hover:text-blue-600 hover:bg-gray-50 focus:outline-none">Clean Data</button>
+        </div>
+
+        <div id="view-upload" class="bg-white p-6 rounded-lg shadow-sm">
+            <h2 class="text-xl font-semibold mb-4">Upload New Transactions</h2>
+            <form id="uploadForm" class="max-w-md space-y-4">
                 <input type="file" id="fileInput" accept=".csv" required 
-                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-            </div>
-            <button type="submit" id="submitBtn" 
-                class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200">
-                Upload & Process
-            </button>
-        </form>
+                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition">Upload & Process</button>
+            </form>
 
-        <div id="statusArea" class="mt-8 hidden">
-            <h2 class="text-lg font-semibold text-gray-700 mb-2">Job Status: <span id="statusText" class="text-blue-600 capitalize">Queued</span></h2>
+            <div id="statusArea" class="mt-6 hidden max-w-md bg-gray-50 p-4 rounded border">
+                <p class="font-semibold mb-2">Status: <span id="statusText" class="text-blue-600 capitalize">Queued</span></p>
+                <p class="text-sm">Processed: <span id="processedCount" class="font-medium">0</span> / <span id="totalCount" class="font-medium">0</span></p>
+                <p class="text-sm text-red-600">Invalid Rows: <span id="invalidCount" class="font-medium">0</span></p>
+                <a id="downloadBtn" href="#" class="hidden mt-3 text-center bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 block transition">Download Error Report</a>
+            </div>
+        </div>
+
+        <div id="view-history" class="hidden bg-white p-6 rounded-lg shadow-sm">
+            <h2 class="text-xl font-semibold mb-4">Processing History</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                    <thead class="bg-gray-50 text-gray-600">
+                        <tr>
+                            <th class="px-4 py-2 rounded-tl">Job ID</th>
+                            <th class="px-4 py-2">Status</th>
+                            <th class="px-4 py-2">Total Rows</th>
+                            <th class="px-4 py-2 text-red-600">Invalid</th>
+                            <th class="px-4 py-2 rounded-tr">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="jobsTableBody" class="divide-y divide-gray-100">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-data" class="hidden bg-white p-6 rounded-lg shadow-sm">
+            <h2 class="text-xl font-semibold mb-4">Stored Transactions</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                    <thead class="bg-gray-50 text-gray-600">
+                        <tr>
+                            <th class="px-4 py-2 rounded-tl">Date</th>
+                            <th class="px-4 py-2">Description</th>
+                            <th class="px-4 py-2">Category</th>
+                            <th class="px-4 py-2 rounded-tr">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody" class="divide-y divide-gray-100">
+                        </tbody>
+                </table>
+            </div>
             
-            <div class="mb-4">
-                <p class="text-sm text-gray-600">Processed: <span id="processedCount" class="font-medium">0</span> / <span id="totalCount" class="font-medium">0</span></p>
-                <p class="text-sm text-red-500">Invalid Rows: <span id="invalidCount" class="font-medium">0</span></p>
+            <div class="mt-4 flex justify-between items-center text-sm text-gray-600">
+                <button id="prevPageBtn" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">Previous</button>
+                <span id="pageIndicator">Page 1</span>
+                <button id="nextPageBtn" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">Next</button>
             </div>
-
-            <a id="downloadBtn" href="#" class="hidden w-full text-center bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-200 block">
-                Download Processed CSV
-            </a>
         </div>
     </div>
 
