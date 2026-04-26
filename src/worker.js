@@ -4,7 +4,7 @@ import redisConnection from "./config/redis.js";
 import Job from "./models/Job.js";
 import { processCsvFile } from "./services/csvService.js";
 
-const worker = new Worker("upload-queue", async (job) => {
+new Worker("upload-queue", async (job) => {
   const { jobId, filePath } = job.data;
   console.log(`\n[Worker] Picked up job ${jobId}`);
   console.log(`[Worker] File located at: ${filePath}`);

@@ -123,6 +123,7 @@ async function loadJobHistory() {
             </tr>
         `).join('');
     } catch (err) {
+        console.error("Error loading history:", err);
         tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-red-500">Failed to load history</td></tr>';
     }
 }
@@ -194,6 +195,7 @@ async function loadTransactions() {
         document.getElementById('nextPageBtn').disabled = data.currentPage >= data.totalPages;
 
     } catch (err) {
+        console.error("Error loading transactions:", err);
         tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-red-500">Failed to load transactions</td></tr>';
     }
 }

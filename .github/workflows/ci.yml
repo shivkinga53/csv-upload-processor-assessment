@@ -1,0 +1,44 @@
+name: Node.js CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-lint-test:
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Run Linter
+      run: npm run lint
+
+    - name: Run Tests
+      run: npm test
+      env:
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USER: admin
+        DB_PASSWORD: admin123
+        DB_NAME: csv_upload_db

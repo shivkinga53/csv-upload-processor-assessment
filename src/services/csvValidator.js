@@ -9,7 +9,7 @@ export const validateRow = (row) => {
         return { valid: false, reason: errors.join(' | ') };
     }
 
-    let cleanAmountStr = String(row.amount).replace(/−/g, '-').replace(/,/g, '').trim();
+    const cleanAmountStr = String(row.amount).replace(/[^0-9.-−]/g, '').replace(/−/g, '-');
     const amountNum = Number(cleanAmountStr);
     if (isNaN(amountNum)) errors.push(`Amount must be a valid number`);
 

@@ -73,6 +73,10 @@ app.post("/upload", (req, res) => {
 app.get("/status/:jobId", async (req, res) => {
     try {
         const { jobId } = req.params;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(jobId)) {
+            return res.status(404).json({ error: "Job not found (Invalid ID format)" });
+        }
         const job = await Job.findOne({ where: { jobId } });
 
         if (!job) {
