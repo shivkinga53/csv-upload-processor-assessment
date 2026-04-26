@@ -1,8 +1,9 @@
 import express from "express";
 import multer from "multer";
 import fs from "fs/promises";
-import { hashFile } from "./services/hashService.js";
 import Job from "./models/Job.js";
+import { enqueueJob } from "./services/queueService.js";
+import { hashFile } from "./services/hashService.js";
 
 const app = express();
 app.use(express.json());
@@ -29,6 +30,9 @@ app.post("/upload", upload.single("file"), async (req, res) => {
         const job = await Job.create({ hash, filePath, status: "queued" });
 
         console.log(`[API] Success! Created new job: ${job.jobId}`);
+
+        // STAGE 2 UPDATE: Push it to the background queue!
+        await enqueueJob(job.jobId, filePath);
 
         return res.json({ jobId: job.jobId, duplicate: false, status: "queued" });
 
