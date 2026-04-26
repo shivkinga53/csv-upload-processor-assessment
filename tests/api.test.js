@@ -3,6 +3,11 @@ import app from '../src/app.js';
 import sequelize from '../src/config/database.js';
 import redisConnection from '../src/config/redis.js';
 
+beforeAll(async () => {
+    await sequelize.authenticate();
+    await sequelize.sync({ force: true });
+});
+
 describe('API Endpoint Permutations', () => {
     it('should reject non-CSV file types immediately (400)', async () => {
         const buffer = Buffer.from('this is a text file');
