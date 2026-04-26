@@ -5,6 +5,9 @@ import Job from "./models/Job.js";
 import { enqueueJob } from "./services/queueService.js";
 import { hashFile } from "./services/hashService.js";
 
+import "./models/Job.js";
+import "./models/Transaction.js";
+
 const app = express();
 app.use(express.json());
 app.use(express.static("public"));
