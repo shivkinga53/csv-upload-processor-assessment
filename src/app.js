@@ -5,6 +5,7 @@ import Job from "./models/Job.js";
 import Transaction from "./models/Transaction.js";
 import { enqueueJob } from "./services/queueService.js";
 import { hashFile } from "./services/hashService.js";
+import { Op } from "sequelize";
 
 const app = express();
 app.use(express.json());
@@ -146,26 +147,93 @@ app.get("/jobs", async (req, res) => {
 });
 
 // Get all transactions with pagination
+// 5. STAGE 10: Get Transactions with Advanced Filtering and Pagination
 app.get("/transactions", async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 100;
         const offset = (page - 1) * limit;
 
+        const { startDate, endDate, dateType, sortBy, sortOrder } = req.query;
+
+        let whereClause = {};
+        const dateField = dateType === 'createdAt' ? 'createdAt' : 'date';
+
+        if (startDate && endDate) {
+            const end = dateField === 'createdAt' ? new Date(`${endDate}T23:59:59.999Z`) : new Date(endDate);
+            whereClause[dateField] = { [Op.between]: [new Date(startDate), end] };
+        } else if (startDate) {
+            whereClause[dateField] = { [Op.gte]: new Date(startDate) };
+        } else if (endDate) {
+            const end = dateField === 'createdAt' ? new Date(`${endDate}T23:59:59.999Z`) : new Date(endDate);
+            whereClause[dateField] = { [Op.lte]: end };
+        }
+
+        const orderField = sortBy || 'date';
+        const orderDir = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+
         const { count, rows } = await Transaction.findAndCountAll({
-            order: [['date', 'DESC'], ['createdAt', 'DESC']],
+            where: whereClause,
+            order: [[orderField, orderDir], ['createdAt', 'DESC']],
             limit,
             offset
         });
 
         res.json({
             totalItems: count,
-            totalPages: Math.ceil(count / limit),
+            totalPages: Math.ceil(count / limit) || 1,
             currentPage: page,
             transactions: rows
         });
     } catch (error) {
         console.error("[API] Error fetching transactions:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// Global Export with 90-Day Safety Limit
+app.get("/transactions/export", async (req, res) => {
+    try {
+        const { startDate, endDate, dateType, sortBy, sortOrder } = req.query;
+
+        if (!startDate || !endDate) {
+            return res.status(400).json({ error: "Start Date and End Date are required for global exports." });
+        }
+
+        const start = new Date(startDate);
+        const dateField = dateType === 'createdAt' ? 'createdAt' : 'date';
+        const end = dateField === 'createdAt' ? new Date(`${endDate}T23:59:59.999Z`) : new Date(endDate);
+
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays > 90) {
+            return res.status(400).json({ error: "Date range cannot exceed 90 days for exports." });
+        }
+
+        const orderField = sortBy || 'date';
+        const orderDir = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+
+        const transactions = await Transaction.findAll({
+            where: { [dateField]: { [Op.between]: [start, end] } },
+            order: [[orderField, orderDir]]
+        });
+
+        if (transactions.length === 0) {
+            return res.status(404).json({ error: "No transactions found in this range." });
+        }
+
+        let csvContent = "Transaction Date,Upload Date,Description,Amount,Category\n";
+        transactions.forEach(t => {
+            const uploadDate = new Date(t.createdAt).toISOString().split('T')[0];
+            csvContent += `${t.date},${uploadDate},"${t.description}",${t.amount},${t.category || ''}\n`;
+        });
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="export_${startDate}_to_${endDate}.csv"`);
+        res.status(200).send(csvContent);
+
+    } catch (error) {
+        console.error("[API] Error exporting transactions:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
