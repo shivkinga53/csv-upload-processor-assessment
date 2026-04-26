@@ -48,6 +48,6 @@ describe('API Endpoint Permutations', () => {
 
 afterAll(async () => {
     await sequelize.close();
-    if (redis) await redis.quit();
+    if (redisConnection) await redisConnection.quit();
     await new Promise(resolve => setTimeout(resolve, 500));
 });
