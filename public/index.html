@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Processor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-6 text-gray-800">CSV Upload Processor</h1>
+        
+        <form id="uploadForm" class="space-y-4">
+            <div>
+                <input type="file" id="fileInput" accept=".csv" required 
+                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+            </div>
+            <button type="submit" id="submitBtn" 
+                class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200">
+                Upload & Process
+            </button>
+        </form>
+
+        <div id="statusArea" class="mt-8 hidden">
+            <h2 class="text-lg font-semibold text-gray-700 mb-2">Job Status: <span id="statusText" class="text-blue-600 capitalize">Queued</span></h2>
+            
+            <div class="mb-4">
+                <p class="text-sm text-gray-600">Processed: <span id="processedCount" class="font-medium">0</span> / <span id="totalCount" class="font-medium">0</span></p>
+                <p class="text-sm text-red-500">Invalid Rows: <span id="invalidCount" class="font-medium">0</span></p>
+            </div>
+
+            <a id="downloadBtn" href="#" class="hidden w-full text-center bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-200 block">
+                Download Processed CSV
+            </a>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

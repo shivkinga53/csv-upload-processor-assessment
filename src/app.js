@@ -7,6 +7,7 @@ import { hashFile } from "./services/hashService.js";
 
 const app = express();
 app.use(express.json());
+app.use(express.static("public"));
 const upload = multer({ dest: "uploads/" });
 
 // Health check endpoint
@@ -31,9 +32,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
         console.log(`[API] Success! Created new job: ${job.jobId}`);
 
-        // STAGE 2 UPDATE: Push it to the background queue!
         await enqueueJob(job.jobId, filePath);
-
         return res.json({ jobId: job.jobId, duplicate: false, status: "queued" });
 
     } catch (error) {
