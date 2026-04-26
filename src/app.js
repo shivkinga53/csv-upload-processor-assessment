@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import fs from "fs/promises";
+import fs from "fs";
 import Job from "./models/Job.js";
 import Transaction from "./models/Transaction.js";
 import { enqueueJob } from "./services/queueService.js";
@@ -9,49 +9,63 @@ import { hashFile } from "./services/hashService.js";
 const app = express();
 app.use(express.json());
 app.use(express.static("public"));
-const upload = multer({ dest: "uploads/" });
+const upload = multer({
+    dest: "uploads/",
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === "text/csv" || file.originalname.toLowerCase().endsWith(".csv")) {
+            cb(null, true);
+        } else {
+            cb(new Error("INVALID_FILE_TYPE"));
+        }
+    }
+});
 
 // Health check endpoint
 app.get("/health", (req, res) => res.send("OK"));
 
 // Upload endpoint
-app.post("/upload", upload.single("file"), async (req, res) => {
-    console.log("[API] Received upload request...");
-
-    if (!req.file) {
-        console.log("[API] No file found in request.");
-        return res.status(400).json({ error: "No file uploaded" });
-    }
-
-    const filePath = req.file.path;
-    console.log(filePath);
-    try {
-        const hash = await hashFile(filePath);
-
-        console.log("[API] Attempting to create Job record in database...");
-        const job = await Job.create({ hash, filePath, status: "queued" });
-
-        console.log(`[API] Success! Created new job: ${job.jobId}`);
-
-        await enqueueJob(job.jobId, filePath);
-        return res.json({ jobId: job.jobId, duplicate: false, status: "queued" });
-
-    } catch (error) {
-        console.log("[API] Error:", error);
-        if (error.name === "SequelizeUniqueConstraintError") {
-            const { hash } = error.fields;
-            console.log("[API] Duplicate file detected! Fetching existing job...");
-            const existingJob = await Job.findOne({ where: { hash } });
-
-            await fs.unlink(filePath).catch(console.error);
-            console.log(`[API] Deleted redundant file. Returning existing jobId: ${existingJob.jobId}`);
-
-            return res.json({ jobId: existingJob.jobId, duplicate: true, status: existingJob.status });
+app.post("/upload", (req, res) => {
+    upload.single("file")(req, res, async (err) => {
+        if (err) {
+            if (err.message === "INVALID_FILE_TYPE") {
+                return res.status(400).json({ error: "Invalid file format. Please upload a .csv file." });
+            }
+            return res.status(500).json({ error: "File upload failed." });
         }
 
-        console.error("[API] Unexpected error:", error);
-        return res.status(500).json({ error: "Internal server error" });
-    }
+        if (!req.file) return res.status(400).json({ error: "No file uploaded." });
+
+        console.log("\n[API] Received upload request...");
+
+        try {
+            const filePath = req.file.path;
+            const hash = await hashFile(filePath);
+
+            console.log(`[API] Attempting to create Job record in database...`);
+
+            const job = await Job.create({ hash, filePath, status: "queued" });
+            console.log(`[API] Success! Created new job: ${job.jobId}`);
+
+            await enqueueJob(job.jobId, filePath);
+
+            return res.json({ jobId: job.jobId, duplicate: false, status: "queued" });
+
+        } catch (error) {
+            if (error.name === 'SequelizeUniqueConstraintError') {
+                console.log("[API] Duplicate file detected! Fetching existing job...");
+                const existingJob = await Job.findOne({ where: { hash: error.fields.hash } });
+
+                if (existingJob) {
+                    await fs.promises.unlink(req.file.path).catch(console.error);
+                    console.log(`[API] Deleted redundant file. Returning existing jobId: ${existingJob.jobId}`);
+                    return res.json({ jobId: existingJob.jobId, duplicate: true, status: existingJob.status });
+                }
+            }
+
+            console.error("[API] Error:", error);
+            res.status(500).json({ error: "Internal server error" });
+        }
+    });
 });
 
 // Status endpoint
@@ -64,7 +78,6 @@ app.get("/status/:jobId", async (req, res) => {
             return res.status(404).json({ error: "Job not found" });
         }
 
-        // Return a clean payload matching our planned structure
         const response = {
             jobId: job.jobId,
             status: job.status,

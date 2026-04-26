@@ -9,7 +9,7 @@ export const processCsvFile = (jobId, inputFilePath, outputFilePath) => {
         let totalRows = 0;
         let rowsProcessed = 0;
         let invalidRows = 0;
-        
+
         let validRowsBuffer = [];
         const BATCH_SIZE = 500;
 
@@ -18,15 +18,15 @@ export const processCsvFile = (jobId, inputFilePath, outputFilePath) => {
         const csvStream = fastCsv.format({ headers: true });
         csvStream.pipe(writeStream);
 
-        fastCsv.parseStream(readStream, { 
-            headers: true, 
+        fastCsv.parseStream(readStream, {
+            headers: true,
             ignoreEmpty: true,
-            strictColumnHandling: true 
+            strictColumnHandling: true
         })
             .on("data", async (row) => {
                 totalRows++;
                 const validation = validateRow(row);
-                
+
                 if (validation.valid) {
                     validRowsBuffer.push({
                         jobId: jobId,
@@ -69,14 +69,24 @@ export const processCsvFile = (jobId, inputFilePath, outputFilePath) => {
             })
             .on("error", reject)
             .on("end", async () => {
+                if (totalRows === 0) {
+                    await fs.promises.unlink(inputFilePath).catch(console.error);
+                    return reject(new Error("File is empty or contains only headers."));
+                }
+
                 if (validRowsBuffer.length > 0) {
                     await Transaction.bulkCreate(validRowsBuffer).catch(console.error);
                 }
 
                 csvStream.end();
-                await Job.update({ totalRows, rowsProcessed, invalidRows, outputPath: outputFilePath }, { where: { jobId } });
+
+                await Job.update(
+                    { totalRows, rowsProcessed, invalidRows, outputPath: outputFilePath },
+                    { where: { jobId } }
+                );
+
                 await fs.promises.unlink(inputFilePath).catch(console.error);
-                
+
                 resolve({ totalRows, rowsProcessed, invalidRows });
             });
     });
