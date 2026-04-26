@@ -130,6 +130,7 @@ app.get("/download/:jobId", async (req, res) => {
     }
 });
 
+// Get all jobs with pagination
 app.get("/jobs", async (req, res) => {
     try {
         const jobs = await Job.findAll({
@@ -144,6 +145,7 @@ app.get("/jobs", async (req, res) => {
     }
 });
 
+// Get all transactions with pagination
 app.get("/transactions", async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -164,6 +166,39 @@ app.get("/transactions", async (req, res) => {
         });
     } catch (error) {
         console.error("[API] Error fetching transactions:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// Exporting valid transactions
+app.get("/export/job/:jobId", async (req, res) => {
+    try {
+        const { jobId } = req.params;
+
+        const job = await Job.findOne({ where: { jobId } });
+        if (!job) return res.status(404).json({ error: "Job not found" });
+
+        const transactions = await Transaction.findAll({
+            where: { jobId },
+            order: [['date', 'ASC']]
+        });
+
+        if (transactions.length === 0) {
+            return res.status(404).json({ error: "No valid transactions found for this job." });
+        }
+
+        let csvContent = "date,description,amount,category\n";
+
+        transactions.forEach(t => {
+            csvContent += `${t.date},"${t.description}",${t.amount},${t.category || ''}\n`;
+        });
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="valid_transactions_${jobId}.csv"`);
+        res.status(200).send(csvContent);
+
+    } catch (error) {
+        console.error(`[API] Error exporting valid transactions for job ${req.params.jobId}:`, error);
         res.status(500).json({ error: "Internal server error" });
     }
 });

@@ -28,7 +28,6 @@ tabs.upload.addEventListener('click', () => switchTab('upload', 'upload'));
 tabs.history.addEventListener('click', () => switchTab('history', 'history'));
 tabs.data.addEventListener('click', () => switchTab('data', 'data'));
 
-// --- 1. Upload Logic (Existing but polished) ---
 let pollingInterval;
 document.getElementById('uploadForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -77,6 +76,15 @@ function pollStatus(jobId) {
                 
                 document.getElementById('submitBtn').disabled = false;
                 document.getElementById('submitBtn').innerText = 'Upload Another File';
+            } 
+            else if (data.status === 'failed') {
+                clearInterval(pollingInterval);
+                
+                statusText.classList.remove('text-blue-600');
+                statusText.classList.add('text-red-600');
+                
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('submitBtn').innerText = 'Upload Failed - Try Again';
             }
         } catch (err) { console.error(err); }
     }, 1000);
@@ -84,23 +92,30 @@ function pollStatus(jobId) {
 
 async function loadJobHistory() {
     const tbody = document.getElementById('jobsTableBody');
-    tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-500">Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500">Loading...</td></tr>';
     
     try {
         const res = await fetch('/jobs');
         const jobs = await res.json();
         
         tbody.innerHTML = jobs.map(job => `
-            <tr class="hover:bg-gray-50">
-                <td class="px-4 py-2 font-mono text-xs">${job.jobId.split('-')[0]}...</td>
-                <td class="px-4 py-2 capitalize ${job.status === 'done' ? 'text-green-600' : 'text-blue-600'}">${job.status}</td>
-                <td class="px-4 py-2">${job.totalRows}</td>
-                <td class="px-4 py-2 text-red-600">${job.invalidRows > 0 ? job.invalidRows : '-'}</td>
-                <td class="px-4 py-2 text-xs text-gray-500">${new Date(job.createdAt).toLocaleString()}</td>
+            <tr class="hover:bg-gray-50 border-b">
+                <td class="px-4 py-3 font-mono text-xs">${job.jobId.split('-')[0]}...</td>
+                <td class="px-4 py-3 capitalize ${job.status === 'done' ? 'text-green-600' : (job.status === 'failed' ? 'text-red-600' : 'text-blue-600')}">${job.status}</td>
+                <td class="px-4 py-3">${job.totalRows}</td>
+                <td class="px-4 py-3 text-red-600 font-medium">${job.invalidRows > 0 ? job.invalidRows : '-'}</td>
+                <td class="px-4 py-3 text-xs text-gray-500">${new Date(job.createdAt).toLocaleString()}</td>
+                <td class="px-4 py-3 text-xs space-y-1">
+                    ${job.status === 'done' && (job.totalRows - job.invalidRows > 0) ? 
+                        `<a href="/export/job/${job.jobId}" class="block text-center bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 border border-blue-200">⬇️ Valid Data</a>` : ''}
+                    
+                    ${job.status === 'done' && job.invalidRows > 0 ? 
+                        `<a href="/download/${job.jobId}" class="block text-center bg-red-50 text-red-600 px-2 py-1 rounded hover:bg-red-100 border border-red-200">⬇️ Error Report</a>` : ''}
+                </td>
             </tr>
         `).join('');
     } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-red-500">Failed to load history</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-red-500">Failed to load history</td></tr>';
     }
 }
 
