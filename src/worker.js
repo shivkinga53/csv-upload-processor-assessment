@@ -1,8 +1,8 @@
-// src/worker.js
 import "dotenv/config";
 import { Worker } from "bullmq";
 import redisConnection from "./config/redis.js";
 import Job from "./models/Job.js";
+import { processCsvFile } from "./services/csvService.js";
 
 const worker = new Worker("upload-queue", async (job) => {
   const { jobId, filePath } = job.data;
@@ -15,16 +15,25 @@ const worker = new Worker("upload-queue", async (job) => {
       { status: 'processing', rowsProcessed: 0, invalidRows: 0 },
       { where: { jobId } }
     );
-    console.log(`[Worker] Job ${jobId} status updated to 'processing'`);
+    const outputPath = `uploads/processed-${jobId}.csv`;
+    console.log(`[Worker] Output file located at: ${outputPath}`);
 
-    console.log(`[Worker] Simulating heavy CSV parsing...`);
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    console.log(`[Worker] Streaming and validating CSV...`);
+    const result = await processCsvFile(jobId, filePath, outputPath);
+    console.log(`[Worker] CSV processed successfully!`);
+
+    console.log(result);
 
     await Job.update(
-      { status: 'done' },
+      {
+        status: 'done',
+        totalRows: result.totalRows,
+        rowsProcessed: result.rowsProcessed,
+        invalidRows: result.invalidRows
+      },
       { where: { jobId } }
     );
-    console.log(`[Worker] Job ${jobId} finished successfully! Status updated to 'done'`);
+    console.log(`[Worker] Job ${jobId} finished! Total: ${result.totalRows}, Invalid: ${result.invalidRows}`);
 
   } catch (error) {
     console.error(`[Worker] Job ${jobId} failed:`, error);
