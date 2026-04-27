@@ -223,6 +223,7 @@ Invalid rows are safely handled without crashing the job or being quietly droppe
 - **Queue**: Redis, managed by BullMQ for robust job processing, retries, and tracking.
 - **Database**: PostgreSQL to reliably store processed transactions and job states.
 - **Frontend**: A minimal frontend interface to interact with the API, showing job queue states and the parsed results.
+- **Graceful Shutdown**: The worker process listens for system signals (`SIGINT`, `SIGTERM`) to gracefully shut down in the event of a container stop, crash, or manual interruption. It ensures active queues are safely closed and connections are severed before exiting, preventing jobs from being left in a stalled state.
 
 ## Potential Improvements (Given More Time)
 - Add websockets for real-time status updates instead of client-side polling.
