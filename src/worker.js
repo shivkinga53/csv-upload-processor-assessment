@@ -4,7 +4,7 @@ import redisConnection from "./config/redis.js";
 import Job from "./models/Job.js";
 import { processCsvFile } from "./services/csvService.js";
 
-new Worker("upload-queue", async (job) => {
+const myWorker = new Worker("upload-queue", async (job) => {
   const { jobId, filePath } = job.data;
   console.log(`\n[Worker] Picked up job ${jobId}`);
   console.log(`[Worker] File located at: ${filePath}`);
@@ -46,3 +46,12 @@ new Worker("upload-queue", async (job) => {
 }, { connection: redisConnection });
 
 console.log("Worker is running and listening to Redis...");
+
+const shutdown = async () => {
+    console.log("\n[Worker] Shutting down gracefully...");
+    await myWorker.close();
+    process.exit(0);
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
